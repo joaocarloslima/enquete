@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VotaAí</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F6F4EE;
+    --card: #FFFFFF;
+    --ink: #1C2230;
+    --quiet: #5A6170;
+    --line: #DCD8CC;
+    --accent: #3F7A1F;
+    --accent-tint: #E3F0D6;
+    --bar: #6DB33F;
+    --bad: #B4561A;
+    --bad-tint: #FBEFE4;
+    --dark: #14181F;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 17px;
+    line-height: 1.45;
+    min-height: 100vh;
+  }
+  main { max-width: 640px; margin: 0 auto; padding: 24px 16px 48px; }
+  .brand {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 13px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--accent); display: flex; justify-content: space-between; gap: 12px;
+  }
+  .live { display: inline-flex; align-items: center; gap: 6px; color: var(--quiet); }
+  .live::before {
+    content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--bar);
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  .live.off::before { background: var(--bad); animation: none; }
+  @keyframes pulse { 50% { opacity: .3; } }
+  h1 {
+    font-family: 'Space Grotesk', system-ui, sans-serif; font-weight: 700;
+    font-size: clamp(28px, 7vw, 40px); line-height: 1.1; margin: 12px 0 24px;
+    overflow-wrap: anywhere;
+  }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px; }
+  label { display: block; font-weight: 600; margin-bottom: 8px; }
+  input[type=text] {
+    width: 100%; font: inherit; font-size: 18px; padding: 12px 14px;
+    border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink);
+  }
+  input[type=text]:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .hint { color: var(--quiet); font-size: 14px; margin-top: 6px; }
+  .options { display: grid; gap: 10px; margin-top: 20px; }
+  .option {
+    font: inherit; font-size: 18px; font-weight: 600; text-align: left;
+    padding: 16px 18px; border-radius: 12px; cursor: pointer;
+    background: var(--card); color: var(--ink); border: 2px solid var(--line);
+    transition: border-color .15s, background .15s;
+  }
+  .option:hover:not(:disabled) { border-color: var(--accent); }
+  .option:disabled { cursor: wait; opacity: .6; }
+  .option.chosen { border-color: var(--accent); background: var(--accent-tint); }
+  .msg { margin-top: 16px; padding: 12px 16px; border-radius: 10px; font-weight: 600; display: none; }
+  .msg.ok { display: block; background: var(--accent-tint); color: var(--accent); }
+  .msg.err { display: block; background: var(--bad-tint); color: var(--bad); }
+  .msg code { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 14px; font-weight: 400; }
+  h2 {
+    font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 22px;
+    margin: 32px 0 12px; display: flex; justify-content: space-between; align-items: baseline;
+  }
+  h2 small { font-family: 'IBM Plex Sans', sans-serif; font-weight: 400; font-size: 15px; color: var(--quiet); }
+  .results { display: grid; gap: 14px; }
+  .row-head { display: flex; justify-content: space-between; gap: 12px; font-weight: 600; }
+  .row-head span:first-child { overflow-wrap: anywhere; }
+  .row-head .num { font-family: 'JetBrains Mono', ui-monospace, monospace; white-space: nowrap; }
+  .track { height: 14px; border-radius: 7px; background: #ECE9E0; overflow: hidden; margin-top: 6px; }
+  .fill { height: 100%; width: 0; border-radius: 7px; background: #A9B0BC; transition: width .6s ease; }
+  .leader .fill { background: var(--bar); }
+  .empty { color: var(--quiet); }
+  .state { text-align: center; padding: 48px 16px; color: var(--quiet); }
+  .state strong { display: block; color: var(--ink); font-size: 20px; margin-bottom: 8px; }
+
+  /* Modo telão: ?tela=placar */
+  body.screen main { max-width: 1400px; padding: 48px 64px; }
+  body.screen .brand { font-size: 20px; }
+  body.screen h1 { font-size: clamp(40px, 5vw, 72px); margin-bottom: 40px; }
+  body.screen #vote-area { display: none; }
+  body.screen h2 { font-size: 32px; }
+  body.screen h2 small { font-size: 24px; }
+  body.screen .results { gap: 28px; }
+  body.screen .row-head { font-size: 32px; }
+  body.screen .track { height: 36px; border-radius: 18px; }
+  body.screen .fill { border-radius: 18px; }
+  body.screen .url {
+    display: block; margin-top: 40px; font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 24px; color: var(--quiet); text-align: center;
+  }
+  .url { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <div class="brand"><span>VotaAí</span><span id="live" class="live">ao vivo</span></div>
+
+  <div id="loading" class="state"><strong>Carregando…</strong></div>
+
+  <div id="no-poll" class="state" hidden>
+    <strong>Nenhuma enquete aberta</strong>
+    A página atualiza sozinha quando o professor criar uma.
+  </div>
+
+  <section id="poll" hidden>
+    <h1 id="question"></h1>
+
+    <div id="vote-area" class="card">
+      <label for="nickname">Seu apelido</label>
+      <input id="nickname" type="text" maxlength="30" autocomplete="nickname" placeholder="ex.: joao">
+      <p class="hint">Escolha uma opção para votar. Um voto por apelido.</p>
+      <div id="options" class="options"></div>
+      <div id="msg" class="msg" role="status" aria-live="polite"></div>
+    </div>
+
+    <h2>Placar <small id="total"></small></h2>
+    <div id="results" class="results"></div>
+    <p class="url" id="url"></p>
+  </section>
+</main>
+
+<script>
+  const CONFIG = {
+    api: '/api/polls',          // GET lista as enquetes
+    votes: id => `/api/polls/${id}/votes`,     // POST { optionId, nickname }
+    results: id => `/api/polls/${id}/results`, // GET [{ option, votes }]
+    resultsEveryMs: 2000,
+    pollsEveryMs: 8000
+  };
+
+  const params = new URLSearchParams(location.search);
+  const fixedPollId = params.get('poll');               // ?poll=3 fixa uma enquete
+  if (params.get('tela') === 'placar') document.body.classList.add('screen');
+
+  const $ = id => document.getElementById(id);
+  let poll = null;
+  let voting = false;
+
+  try { $('nickname').value = localStorage.getItem('votaai.nickname') || ''; } catch {}
+  $('nickname').addEventListener('input', () => {
+    try { localStorage.setItem('votaai.nickname', $('nickname').value); } catch {}
+  });
+
+  function show(id) {
+    for (const el of ['loading', 'no-poll', 'poll']) $(el).hidden = el !== id;
+  }
+
+  function setLive(ok) { $('live').classList.toggle('off', !ok); $('live').textContent = ok ? 'ao vivo' : 'sem conexão'; }
+
+  async function loadPolls() {
+    try {
+      const res = await fetch(CONFIG.api, { cache: 'no-store' });
+      if (!res.ok) throw new Error(res.status);
+      const polls = await res.json();
+      setLive(true);
+      const next = fixedPollId
+        ? polls.find(p => String(p.id) === fixedPollId)
+        : polls.filter(p => p.open !== false).sort((a, b) => b.id - a.id)[0];
+      if (!next) { poll = null; show('no-poll'); return; }
+      if (!poll || poll.id !== next.id || (next.options || []).length !== (poll.options || []).length) {
+        poll = next;
+        renderPoll();
+        loadResults();
+      }
+      show('poll');
+    } catch (e) {
+      setLive(false);
+      if (!poll) show('no-poll');
+    }
+  }
+
+  function renderPoll() {
+    $('question').textContent = poll.question;
+    $('msg').className = 'msg';
+    $('url').textContent = location.origin.replace(/^https?:\/\//, '');
+    const box = $('options');
+    box.replaceChildren();
+    for (const opt of poll.options || []) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'option';
+      b.textContent = opt.label;
+      b.addEventListener('click', () => vote(opt, b));
+      box.appendChild(b);
+    }
+  }
+
+  function message(kind, text, detail) {
+    const m = $('msg');
+    m.className = 'msg ' + kind;
+    m.replaceChildren(document.createTextNode(text));
+    if (detail) {
+      const c = document.createElement('code');
+      c.textContent = ' ' + detail;
+      m.append(document.createElement('br'), c);
+    }
+  }
+
+  const fallback = {
+    400: 'Confira o apelido: ele é obrigatório e tem no máximo 30 caracteres.',
+    404: 'Essa enquete não existe mais.',
+    409: 'Você já votou nesta enquete.',
+    422: 'Essa opção não pertence a esta enquete.'
+  };
+
+  async function vote(opt, button) {
+    if (voting) return;
+    const nickname = $('nickname').value;
+    if (!nickname.trim()) { message('err', 'Digite um apelido antes de votar.'); $('nickname').focus(); return; }
+    voting = true;
+    document.querySelectorAll('.option').forEach(b => { b.disabled = true; b.classList.remove('chosen'); });
+    try {
+      const res = await fetch(CONFIG.votes(poll.id), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ optionId: opt.id, nickname })
+      });
+      if (res.ok) {
+        button.classList.add('chosen');
+        message('ok', `Voto em “${opt.label}” registrado!`);
+        loadResults();
+      } else {
+        let detail = '';
+        try { const p = await res.json(); detail = p.detail || p.title || ''; } catch {}
+        message('err', fallback[res.status] || 'Não deu para registrar o voto.', `HTTP ${res.status}${detail ? ' · ' + detail : ''}`);
+      }
+    } catch (e) {
+      message('err', 'Sem conexão com a API.');
+    } finally {
+      voting = false;
+      document.querySelectorAll('.option').forEach(b => b.disabled = false);
+    }
+  }
+
+  async function loadResults() {
+    if (!poll) return;
+    const box = $('results');
+    try {
+      const res = await fetch(CONFIG.results(poll.id), { cache: 'no-store' });
+      if (!res.ok) throw new Error(res.status);
+      const rows = (await res.json()).map(r => ({
+        label: r.option ?? r.label ?? '?',
+        votes: Number(r.votes ?? r.count ?? 0)
+      }));
+      setLive(true);
+      const total = rows.reduce((s, r) => s + r.votes, 0);
+      const max = Math.max(0, ...rows.map(r => r.votes));
+      $('total').textContent = total === 1 ? '1 voto' : `${total} votos`;
+      // Reaproveita as linhas existentes para a barra animar em vez de piscar.
+      const existing = new Map([...box.children].map(el => [el.dataset.label, el]));
+      const keep = [];
+      for (const r of rows) {
+        let el = existing.get(r.label);
+        if (!el) {
+          el = document.createElement('div');
+          el.dataset.label = r.label;
+          el.innerHTML = '<div class="row-head"><span></span><span class="num"></span></div><div class="track"><div class="fill"></div></div>';
+          el.querySelector('.row-head span').textContent = r.label;
+        }
+        const pct = total ? Math.round(r.votes * 100 / total) : 0;
+        el.querySelector('.num').textContent = `${r.votes} · ${pct}%`;
+        el.querySelector('.fill').style.width = (max ? r.votes * 100 / max : 0) + '%';
+        el.classList.toggle('leader', r.votes > 0 && r.votes === max);
+        keep.push(el);
+      }
+      box.replaceChildren(...keep);
+      if (!rows.length) box.innerHTML = '<p class="empty">Sem opções ainda.</p>';
+    } catch (e) {
+      if (!box.children.length || box.querySelector('.empty')) {
+        box.innerHTML = '<p class="empty">O placar aparece aqui assim que a rota de resultados existir.</p>';
+      }
+    }
+  }
+
+  loadPolls();
+  setInterval(loadPolls, CONFIG.pollsEveryMs);
+  setInterval(loadResults, CONFIG.resultsEveryMs);
+</script>
+</body>
+</html>
